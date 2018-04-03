@@ -5,7 +5,9 @@ Library yang perlu diinstall :
 pip install Flask
 pip install Flask-Mail
 pip install Flask-SQLAlchemy
+pip install flask-cors
 pip install PyMySQL
+pip install requests
 
 Untuk membuat tabel pada database :
 python
