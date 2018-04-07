@@ -79,8 +79,6 @@ class hotel_api():
         return passenger_data
 
     def hotel_search(self, place_type, input_id):
-        tt.sleep(5)
-
         passenger_data = self.passenger_data(place_type, input_id)
         url = "http://engine.hotellook.com/api/v2/search/start.json?"
         data = requests.get(url, params=passenger_data)
@@ -129,7 +127,6 @@ class hotel_api():
             }
             result.append(temp)
         return result
-
 
     def save_result(self, hotel_result):
         f = open("hotel.json","w+")
