@@ -2,6 +2,7 @@ import json
 import ast
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import desc
 from flask_mail import Mail, Message #email
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash #untuk encode password
@@ -263,6 +264,35 @@ def get_airport(city):
 
     return jsonify({'result': result})
 
+@app.route("/hotel/data/<hotel_id>", methods=['GET'])
+def get_hotel_data(hotel_id):
+    hotel = Place.query.filter(Place.misc == hotel_id).first()
+    result = {
+        'place_id' : hotel.place_id,
+        'category_id' : hotel.category_id,
+        'category_name' : hotel.category_place.name,
+        'city_code' : hotel.city_code,
+        'city_name' : hotel.city.city_name,
+        'latitude' : hotel.latitude,
+        'longitude' : hotel.longitude,
+        'name' : hotel.name,
+        'address' : hotel.address,
+        'phone_number' : hotel.phone_number,
+        'rating' : hotel.rating,
+        'reviews' : hotel.reviews,
+        'description' : hotel.description,
+        'avg_dur' : hotel.avg_dur,
+        'opening_hours' : ast.literal_eval(hotel.opening_hours),
+        'types' : hotel.types,
+        'interests' : hotel.interests,
+        'url' : hotel.url,
+        'photo_name' : hotel.photo_name,
+        'extension' : hotel.extension,
+        'misc' : hotel.misc,
+    }
+
+    return jsonify({'result': result})
+
 @app.route("/airport/nearest/<city>", methods=['GET'])
 def get_nearest_airport(city):
     airport = City.query.filter(City.city_code == city).first()
@@ -276,6 +306,70 @@ def get_hotel(city):
     hotels = Place.query.filter(Place.city_code == city).filter(Place.category_id == 4).all()
     for hotel in hotels:
         result.append(hotel.misc);
+
+    return jsonify({'result': result, 'total': len(result)})
+
+@app.route("/attraction/<city>", methods=['GET'])
+def get_all_tourist_attraction(city):
+    result = []
+    attractions = Place.query.filter(Place.city_code == city).filter(Place.category_id == 2).order_by(desc(Place.reviews)).all()
+    for attraction in attractions:
+        temp = {
+            'place_id' : attraction.place_id,
+            'category_id' : attraction.category_id,
+            'category_name' : attraction.category_place.name,
+            'city_code' : attraction.city_code,
+            'city_name' : attraction.city.city_name,
+            'latitude' : attraction.latitude,
+            'longitude' : attraction.longitude,
+            'name' : attraction.name,
+            'address' : attraction.address,
+            'phone_number' : attraction.phone_number,
+            'rating' : attraction.rating,
+            'reviews' : attraction.reviews,
+            'description' : attraction.description,
+            'avg_dur' : attraction.avg_dur,
+            'opening_hours' : ast.literal_eval(attraction.opening_hours),
+            'types' : attraction.types,
+            'interests' : attraction.interests,
+            'url' : attraction.url,
+            'photo_name' : attraction.photo_name,
+            'extension' : attraction.extension,
+            'misc' : attraction.misc,
+        }
+        result.append(temp);
+
+    return jsonify({'result': result, 'total': len(result)})
+
+@app.route("/food/<city>", methods=['GET'])
+def get_all_food(city):
+    result = []
+    all_food = Place.query.filter(Place.city_code == city).filter(Place.category_id == 3).order_by(desc(Place.reviews)).all()
+    for food in all_food:
+        temp = {
+            'place_id' : food.place_id,
+            'category_id' : food.category_id,
+            'category_name' : food.category_place.name,
+            'city_code' : food.city_code,
+            'city_name' : food.city.city_name,
+            'latitude' : food.latitude,
+            'longitude' : food.longitude,
+            'name' : food.name,
+            'address' : food.address,
+            'phone_number' : food.phone_number,
+            'rating' : food.rating,
+            'reviews' : food.reviews,
+            'description' : food.description,
+            'avg_dur' : food.avg_dur,
+            'opening_hours' : ast.literal_eval(food.opening_hours),
+            'types' : food.types,
+            'interests' : food.interests,
+            'url' : food.url,
+            'photo_name' : food.photo_name,
+            'extension' : food.extension,
+            'misc' : food.misc,
+        }
+        result.append(temp);
 
     return jsonify({'result': result, 'total': len(result)})
 
