@@ -2,7 +2,7 @@ import json
 import ast
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from flask_mail import Mail, Message #email
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash #untuk encode password
@@ -39,7 +39,6 @@ class City(db.Model):
     city_code = db.Column(db.String(3), primary_key=True)
     country_code = db.Column(db.String(2), db.ForeignKey('country.country_code'), nullable=False)
     city_name = db.Column(db.String(255), nullable=False)
-    zone_id = db.Column(db.Integer(), nullable=False)
     has_airport = db.Column(db.Integer(), nullable=False)
     airport = db.Column(db.String(3), nullable=False)
     hotel_city_id = db.Column(db.String(255), nullable=False)
@@ -203,7 +202,6 @@ def get_all_city():
             temp2 = {}
             temp2['city_code'] = city.city_code
             temp2['city_name'] = city.city_name
-            temp2['zone_id'] = city.zone_id
             temp2['has_airport'] = city.has_airport
             temp2['hotel_city_id'] = city.hotel_city_id
             temp['cities'].append(temp2)
@@ -226,7 +224,6 @@ def get_city_destination():
             temp2 = {}
             temp2['city_code'] = city.city_code
             temp2['city_name'] = city.city_name
-            temp2['zone_id'] = city.zone_id
             temp2['has_airport'] = city.has_airport
             temp2['hotel_city_id'] = city.hotel_city_id
             temp['cities'].append(temp2)
@@ -372,6 +369,73 @@ def get_all_food(city):
         result.append(temp);
 
     return jsonify({'result': result, 'total': len(result)})
+
+@app.route("/place/distance", methods=['GET'])
+def get_distance():
+    origin = request.args.get("origin")
+    destination = request.args.get("destination")
+
+    distance = Distance.query.filter(Distance.origin == origin).filter(Distance.destination == destination).first()
+    if distance:
+        result = {
+            'origin' : distance.origin,
+            'destination' : distance.destination,
+            'travel_time' : distance.travel_time,
+            'status' : 'Y'
+        }
+    else:
+        result = {
+            'origin' : origin,
+            'destination' : destination,
+            'travel_time' : 777,
+            'status' : 'N'
+        }
+
+    return jsonify({'result': result})
+
+@app.route("/place/nearby", methods=['GET'])
+def get_nearby():
+    origin = request.args.get("origin")
+    distances = Distance.query.filter(Distance.origin == origin).order_by(Distance.travel_time).limit(20).all()
+    result = []
+    for distance in distances:
+        place_id = distance.destination
+        place = Place.query.filter(Place.place_id == place_id).filter(or_(Place.category_id == 2, Place.category_id == 3)).first()
+
+        if place:
+            temp = {
+                'place_id' : place.place_id,
+                'category_id' : place.category_id,
+                'category_name' : place.category_place.name,
+                'city_code' : place.city_code,
+                'city_name' : place.city.city_name,
+                'latitude' : place.latitude,
+                'longitude' : place.longitude,
+                'name' : place.name,
+                'address' : place.address,
+                'phone_number' : place.phone_number,
+                'rating' : place.rating,
+                'reviews' : place.reviews,
+                'description' : place.description,
+                'avg_dur' : place.avg_dur,
+                'opening_hours' : ast.literal_eval(place.opening_hours),
+                'types' : place.types,
+                'interests' : place.interests,
+                'url' : place.url,
+                'photo_name' : place.photo_name,
+                'extension' : place.extension,
+                'misc' : place.misc,
+                'travel_time' : distance.travel_time
+            }
+            result.append(temp);
+        # else:
+        #     temp = {
+        #         'place_id' : distance.destination,
+        #         'travel_time' : distance.travel_time
+        #     }
+        #     result.append(temp);
+
+    return jsonify({'result': result, 'length': len(result)})
 
 if __name__ == '__main__':
 	app.run()
