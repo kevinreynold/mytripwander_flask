@@ -1,10 +1,11 @@
 import json
-import ast
+import ast # ast.literval_eval()
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc, or_
 from flask_mail import Mail, Message #email
 from flask_cors import CORS
+from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash #untuk encode password
 from hotel import hotel_api
 
@@ -22,6 +23,8 @@ class User(db.Model):
     username = db.Column(db.String(80), nullable=False)
     password = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+
+    trips = db.relationship('Trip', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -101,6 +104,19 @@ class Distance(db.Model):
 
     def __repr__(self):
         return '<Distance %r>' % (str(self.origin) + ' - ' + str(self.destination))
+
+class Trip(db.Model):
+    id = db.Column(db.Integer(), primary_key=True)
+    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'), nullable=False)
+    plan_data = db.Column(db.Text(), nullable=False)
+    city_plan_data = db.Column(db.Text(), nullable=False)
+    flight_data = db.Column(db.Text(), nullable=False)
+    total_budget = db.Column(db.Float(), nullable=False)
+    description = db.Column(db.Text(), nullable=True)
+    created_at = db.Column(db.DateTime(), nullable=False)
+
+    def __repr__(self):
+        return '<Trip %r>' % (str(self.id))
 
 #API
 @app.route("/")
@@ -250,7 +266,7 @@ def get_airport(city):
         'reviews' : airport.reviews,
         'description' : airport.description,
         'avg_dur' : airport.avg_dur,
-        'opening_hours' : ast.literal_eval(airport.opening_hours),
+        'opening_hours' : json.loads(airport.opening_hours),
         'types' : airport.types,
         'interests' : airport.interests,
         'url' : airport.url,
@@ -279,7 +295,7 @@ def get_hotel_data(hotel_id):
         'reviews' : hotel.reviews,
         'description' : hotel.description,
         'avg_dur' : hotel.avg_dur,
-        'opening_hours' : ast.literal_eval(hotel.opening_hours),
+        'opening_hours' : json.loads(hotel.opening_hours),
         'types' : hotel.types,
         'interests' : hotel.interests,
         'url' : hotel.url,
@@ -326,7 +342,7 @@ def get_all_tourist_attraction(city):
             'reviews' : attraction.reviews,
             'description' : attraction.description,
             'avg_dur' : attraction.avg_dur,
-            'opening_hours' : ast.literal_eval(attraction.opening_hours),
+            'opening_hours' : json.loads(attraction.opening_hours),
             'types' : attraction.types,
             'interests' : attraction.interests,
             'url' : attraction.url,
@@ -358,7 +374,7 @@ def get_all_food(city):
             'reviews' : food.reviews,
             'description' : food.description,
             'avg_dur' : food.avg_dur,
-            'opening_hours' : ast.literal_eval(food.opening_hours),
+            'opening_hours' : json.loads(food.opening_hours),
             'types' : food.types,
             'interests' : food.interests,
             'url' : food.url,
@@ -418,7 +434,7 @@ def get_nearby():
                 'reviews' : place.reviews,
                 'description' : place.description,
                 'avg_dur' : place.avg_dur,
-                'opening_hours' : ast.literal_eval(place.opening_hours),
+                'opening_hours' : json.loads(place.opening_hours),
                 'types' : place.types,
                 'interests' : place.interests,
                 'url' : place.url,
@@ -436,6 +452,66 @@ def get_nearby():
         #     result.append(temp);
 
     return jsonify({'result': result, 'length': len(result)})
+
+@app.route("/trip/save", methods=['POST'])
+def save_trip():
+    data = request.get_json()
+    created_at = datetime.now().replace(microsecond=0)
+
+    new_trip = Trip(user_id=data['user_id'], plan_data=data['plan_data'], city_plan_data=data['city_plan_data'], flight_data=data['flight_data'], total_budget=data['total_budget'], created_at=created_at)
+    db.session.add(new_trip)
+    db.session.commit()
+
+    #cari trip idnya berdasarkan created_at
+    trip = Trip.query.filter(Trip.created_at == created_at).filter(Trip.user_id == data['user_id']).first()
+
+    return jsonify({'message' : 'Success save new trip!', 'trip_id' : trip.id})
+
+@app.route("/trip/update", methods=['POST'])
+def update_trip():
+    data = request.get_json()
+
+    trip = Trip.query.filter(Trip.id == data['trip_id']).first()
+    trip.plan_data = data['plan_data']
+    trip.city_plan_data = data['city_plan_data']
+    trip.flight_data = data['flight_data']
+    trip.total_budget = data['total_budget']
+
+    db.session.commit()
+
+    return jsonify({'message' : 'Success update trip!'})
+
+@app.route("/trip/load/all", methods=['GET'])
+def load_trip_list():
+    user_id = int(request.args.get("user_id"))
+    trips = Trip.query.filter(Trip.user_id == user_id).order_by(desc(Trip.created_at)).all()
+    result = []
+    for trip in trips:
+        temp = {
+            'id': trip.id,
+            'plan_data': json.loads(trip.plan_data),
+            'total_budget': trip.total_budget,
+            'created_at': trip.created_at
+            # 'plan_data': trip.plan_data
+        }
+        result.append(temp);
+
+    return jsonify({'result': result, 'total': len(result)})
+
+@app.route("/trip/load/<id>", methods=['GET'])
+def load_trip(id):
+    trip = Trip.query.filter(Trip.id == id).first()
+    result = {
+        'id': trip.id,
+        'plan_data': json.loads(trip.plan_data),
+        'city_plan_data': json.loads(trip.city_plan_data),
+        'flight_data': json.loads(trip.flight_data),
+        'total_budget': trip.total_budget,
+        'created_at': trip.created_at
+    }
+
+    return jsonify({'result': result, 'total': len(result)})
+
 
 if __name__ == '__main__':
 	app.run()
