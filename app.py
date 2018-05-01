@@ -29,6 +29,12 @@ class User(db.Model):
     def __repr__(self):
         return '<User %r>' % self.username
 
+class Currency(db.Model):
+    id = db.Column(db.String(3), primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    symbol = db.Column(db.String(10), nullable=False)
+    rate = db.Column(db.Float(), nullable=False)
+
 class Country(db.Model):
     country_code = db.Column(db.String(2), primary_key=True)
     country_name = db.Column(db.String(45), nullable=False)
@@ -511,6 +517,17 @@ def load_trip(id):
     }
 
     return jsonify({'result': result, 'total': len(result)})
+
+@app.route("/currency/<id>", methods=['GET'])
+def get_currency_value(id):
+    currency = Currency.query.filter(Currency.id == id.upper()).first()
+    result = {
+        'name': currency.name,
+        'symbol': currency.symbol,
+        'rate': currency.rate,
+    }
+
+    return jsonify({'result': result})
 
 
 if __name__ == '__main__':

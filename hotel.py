@@ -13,7 +13,7 @@ class hotel_api():
         self.marker = "143764"
         self.customerIP = "127.0.0.1"
         self.lang = "en"
-        self.currency = "USD"
+        self.currency = "RUB"
         self.waitForResult = "1"
 
         self.query = query
