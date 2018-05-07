@@ -1,5 +1,7 @@
 import json
 import ast # ast.literval_eval()
+import string
+from random import *
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import desc, or_
@@ -20,11 +22,14 @@ mail = Mail(app)
 db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    currency_id = db.Column(db.String(3), db.ForeignKey('currency.id'), nullable=False)
     username = db.Column(db.String(80), nullable=False)
     password = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
 
     trips = db.relationship('Trip', backref='user', lazy='dynamic')
+
+    tripschedules = db.relationship('Tripschedule', backref='user', lazy='dynamic')
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -34,6 +39,11 @@ class Currency(db.Model):
     name = db.Column(db.String(50), nullable=False)
     symbol = db.Column(db.String(10), nullable=False)
     rate = db.Column(db.Float(), nullable=False)
+
+    users = db.relationship('User', backref='currency', lazy='dynamic')
+
+    def __repr__(self):
+        return '<Currency %r>' % self.id
 
 class Country(db.Model):
     country_code = db.Column(db.String(2), primary_key=True)
@@ -124,6 +134,18 @@ class Trip(db.Model):
     def __repr__(self):
         return '<Trip %r>' % (str(self.id))
 
+class Tripschedule(db.Model):
+    schedule_id = db.Column(db.Integer(), primary_key=True)
+    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'), nullable=False)
+    plan_data = db.Column(db.Text(), nullable=False)
+    is_done = db.Column(db.Integer(), nullable=False)
+    description = db.Column(db.Text(), nullable=True)
+    created_at = db.Column(db.DateTime(), nullable=False)
+    done_at = db.Column(db.DateTime(), nullable=True)
+
+    def __repr__(self):
+        return '<Tripschedule %r>' % (str(self.schedule_id))
+
 #API
 @app.route("/")
 def hello():
@@ -139,9 +161,14 @@ def login():
     user = User.query.filter(User.email == data['email']).first()
 
     if user and check_password_hash(user.password, data['password']):
-        return jsonify({'message' : 'Login Sucess!!'})
+        new_user = {
+            'id': user.id,
+            'currency_id': user.currency_id,
+            'username': user.username
+        }
+        return jsonify({'message' : 'Login Success..', 'user': new_user, 'status': 'OK'})
 
-    return jsonify({'message' : 'Login Failed!!'})
+    return jsonify({'message' : 'Login Failed..', 'status': 'NO'})
 
 @app.route("/forgot/<email>", methods=['GET'])
 def forgot_password(email):
@@ -150,12 +177,21 @@ def forgot_password(email):
     if not user:
         return jsonify({'message' : 'Your request is submitted!'})
 
-    msg = Message('Forgot Password', sender = app.config['MAIL_USERNAME'], recipients = [email])
-    msg.body = "This is the email body" #kasih password baru
-    mail.send(msg)
-    return jsonify({'message' : 'Your request is submitted!', 'email' : email})
+    min_char = 8
+    max_char = 12
+    allchar = string.ascii_letters + string.digits
+    new_password = "".join(choice(allchar) for x in range(randint(min_char, max_char)))
 
-@app.route("/user/changepass", methods=['PUT'])
+    new_password_encrypted = generate_password_hash(new_password, method='sha256')
+    user.password = new_password_encrypted
+    db.session.commit()
+
+    msg = Message('Forgot Password', sender = app.config['MAIL_USERNAME'], recipients = [email])
+    msg.html = "<h2>Your password has been reset</h2><br> <h3>Dear " + user.username + ",<br><br> Your account password has been reset. Please use the following temporary password to log in.<br><br> Your temporary password : <b>" + new_password + "</b></h3>"#kasih password baru
+    mail.send(msg)
+    return jsonify({'message' : 'Your request is submitted!', 'email' : email, 'password' : new_password})
+
+@app.route("/user/changepass", methods=['POST'])
 def change_password():
     data = request.get_json()
     user = User.query.filter(User.email == data['email']).first()
@@ -164,9 +200,9 @@ def change_password():
         new_password = generate_password_hash(data['new_password'], method='sha256')
         user.password = new_password
         db.session.commit()
-        return jsonify({'message' : 'Change Password Success!!'})
+        return jsonify({'message' : 'Change Password Success!!', 'status' : 'OK'})
 
-    return jsonify({'message' : 'Change Password Failed!!'})
+    return jsonify({'message' : 'Change Password Failed!!', 'status' : 'NO'})
 
 @app.route("/user/register", methods=['POST'])
 def register_user():
@@ -176,14 +212,41 @@ def register_user():
     check_user = User.query.filter(User.email == data['email']).first()
 
     if check_user:
-        return jsonify({'message' : 'Please use another email!'})
+        return jsonify({'message' : 'Email address is already taken.', 'status' : 'NO'})
 
     hashed_password = generate_password_hash(data['password'], method='sha256')
-    new_user = User(username=data['username'], password=hashed_password, email=data['email'])
+    new_user = User(username=data['username'], password=hashed_password, email=data['email'], currency_id=data['currency_id'])
     db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message' : 'Success register new user!'})
+    new_user_id = User.query.filter(User.email == data['email']).first().id
+
+    return jsonify({'message' : 'Success register new user.', 'status' : 'OK', 'user_id': new_user_id})
+
+@app.route("/currency", methods=['GET'])
+def get_all_currency():
+    currencies = Currency.query.all()
+    result = []
+    for currency in currencies:
+        temp = {
+            'id': currency.id,
+            'name': currency.name,
+            'symbol': currency.symbol
+        }
+        result.append(temp)
+
+    return jsonify({'result': result})
+
+@app.route("/currency/update", methods=['POST'])
+def update_currency():
+    data = request.get_json()
+
+    user = User.query.filter(User.id == data['user_id']).first()
+    user.currency_id = data['currency_id']
+
+    db.session.commit()
+
+    return jsonify({'message' : 'Success update currency!'})
 
 @app.route("/autocomplete/hotels", methods=['GET'])
 def hotels_autocomplete():
@@ -458,6 +521,18 @@ def get_nearby():
         #     result.append(temp);
 
     return jsonify({'result': result, 'length': len(result)})
+
+@app.route("/trip/auto", methods=['POST'])
+def save_auto_trip():
+    data = request.get_json()
+    created_at = datetime.now().replace(microsecond=0)
+
+    new_trip_schedule = Tripschedule(user_id=data['user_id'], plan_data=data['plan_data'], is_done=0, description=data['description'], created_at=created_at, done_at=None)
+    db.session.add(new_trip_schedule)
+    db.session.commit()
+
+    #cari trip idnya berdasarkan created_at
+    return jsonify({'message' : 'Success save new auto trip!'})
 
 @app.route("/trip/save", methods=['POST'])
 def save_trip():
