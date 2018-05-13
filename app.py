@@ -10,6 +10,7 @@ from flask_cors import CORS
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash #untuk encode password
 from hotel import hotel_api
+from pdf import TripPDF
 
 app = Flask(__name__)
 
@@ -604,6 +605,23 @@ def get_currency_value(id):
 
     return jsonify({'result': result})
 
+@app.route("/make/pdf", methods=['POST'])
+def make_pdf():
+    data = request.get_json()
+
+    filename = data['filename']
+    print_data = json.loads(data['print_data'])
+    total_days_trip = data['total_days_trip']
+    dest_title = data['dest_title']
+    total_budget = data['total_budget']
+    first_city = data['first_city']
+    start_date = data['start_date']
+
+    trip_pdf = TripPDF(filename=filename, print_data=print_data, total_days_trip=total_days_trip, dest_title=dest_title, total_budget=total_budget, first_city=first_city, start_date=start_date)
+    trip_pdf.run()
+
+    # return jsonify({'filename' : filename, 'print_data' : print_data, 'total_days_trip' : total_days_trip, 'dest_title' : dest_title, 'total_budget' : total_budget})
+    return jsonify({'STATUS' : 'OK'})
 
 if __name__ == '__main__':
 	app.run()
