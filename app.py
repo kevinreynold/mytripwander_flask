@@ -171,6 +171,38 @@ def login():
 
     return jsonify({'message' : 'Login Failed..', 'status': 'NO'})
 
+@app.route("/login/google", methods=['POST'])
+def google_login():
+    data = request.get_json()
+    user = User.query.filter(User.email == data['email']).first()
+
+    if not user:
+        # buat id baru
+        hashed_password = generate_password_hash(data['email'], method='sha256')
+        new_user = User(username=data['username'], password=hashed_password, email=data['email'], currency_id='IDR')
+        db.session.add(new_user)
+        db.session.commit()
+
+        new_user_id = User.query.filter(User.email == data['email']).first().id
+
+        user_id = new_user_id
+        currency_id = 'IDR'
+        username = data['username']
+        status = 'REGISTER'
+    else:
+        user_id = user.id
+        currency_id = user.currency_id
+        username = user.username
+
+        status = 'LOGIN'
+
+    new_user = {
+        'id': user_id,
+        'currency_id': currency_id,
+        'username': username
+    }
+    return jsonify({'message' : 'Login Success..', 'user': new_user, 'status': status})
+
 @app.route("/forgot/<email>", methods=['GET'])
 def forgot_password(email):
     user = User.query.filter(User.email == email).first()
@@ -624,4 +656,4 @@ def make_pdf():
     return jsonify({'STATUS' : 'OK'})
 
 if __name__ == '__main__':
-	app.run()
+	app.run(host='0.0.0.0')
