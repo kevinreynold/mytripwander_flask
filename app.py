@@ -27,6 +27,7 @@ class User(db.Model):
     username = db.Column(db.String(80), nullable=False)
     password = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    device_token = db.Column(db.Text(), nullable=True)
 
     trips = db.relationship('Trip', backref='user', lazy='dynamic')
 
@@ -155,6 +156,16 @@ def hello():
 @app.route("/test", methods=['GET'])
 def test():
     return jsonify({'message' : 'MANTAPPP!!'})
+
+@app.route("/update/token", methods=['POST'])
+def update_device_token():
+    data = request.get_json()
+    user = User.query.filter(User.email == data['email']).first()
+
+    user.device_token = data['device_token']
+    db.session.commit()
+
+    return jsonify({'status': 'OK'})
 
 @app.route("/login", methods=['POST'])
 def login():
