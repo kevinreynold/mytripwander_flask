@@ -11,7 +11,7 @@ from reportlab.lib.units import mm, cm
 from reportlab.lib.enums import TA_JUSTIFY,TA_LEFT,TA_CENTER,TA_RIGHT
 
 class TripPDF():
-    def __init__(self, filename="test_report_lab.pdf", print_data=None, total_days_trip=None, dest_title=None, total_budget=None, first_city=None, start_date=None):
+    def __init__(self, filename="test_report_lab.pdf", print_data=None, total_days_trip=None, dest_title=None, total_budget=None, first_city=None, start_date=None, offline=False):
         pdfmetrics.registerFont(TTFont('Arial', 'font/arial.ttf'))
         pdfmetrics.registerFont(TTFont('Cyberbit', 'font/cyberbit.ttf'))
 
@@ -22,10 +22,12 @@ class TripPDF():
         self.first_city = first_city
         self.start_date = start_date
 
-        # self.filename = "C:\\xampp\\htdocs\\pdf_result\\" + filename
-        self.filename = r"/var/www/html/pdf/" + filename
+        if offline:
+            self.filename = "C:\\xampp\\htdocs\\pdf_result\\" + filename
+        else:
+            self.filename = r"/var/www/html/pdf/" + filename
 
-        self.doc = SimpleDocTemplate(self.filename, pagesize=A4, rightMargin=1.5*cm, leftMargin=1*cm, topMargin=2*cm, bottomMargin=2*cm)
+        self.doc = SimpleDocTemplate(self.filename, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.25*cm, topMargin=2*cm, bottomMargin=2*cm)
         self.style = getSampleStyleSheet()
         self.style.wordWrap = 'CJK'
 
@@ -53,24 +55,32 @@ class TripPDF():
 
     def setHeader(self, canvas, doc):
         canvas.saveState()
+
         canvas.setFont('Arial',16)
-        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 27.5*cm, 'Trip Wander')
-        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 26.7*cm, str(self.total_days_trip) + ' Days Trip')
-        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 25.9*cm, self.dest_title)
-        canvas.setFont('Arial',14)
-        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 25.3*cm, 'From')
-        canvas.setFont('Arial',16)
-        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 24.7*cm, self.first_city)
-        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 23.9*cm, self.start_date)
-        canvas.setFont('Arial',12)
-        canvas.drawRightString(doc.pagesize[0]-(1.8*cm), 23*cm, 'Total Budget:')
-        canvas.drawRightString(doc.pagesize[0]-(1.8*cm), 22.4*cm, self.total_budget)
+        canvas.drawString(1.5*cm, 28*cm, 'Trip Wander - Itinerary')
+
+        canvas.setFont('Arial',14.5)
+        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 26.4*cm, str(self.total_days_trip) + ' Days Trip')
+        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 25.6*cm, self.dest_title)
+        canvas.drawCentredString((doc.pagesize[0]/2.0)-(0.25*cm), 24.8*cm, self.start_date)
+
+        canvas.setFont('Arial',10)
+        canvas.drawString(1.5*cm, 24.65*cm, 'From:')
+        canvas.drawString(1.5*cm, 24.2*cm, self.first_city)
+        canvas.drawRightString(doc.pagesize[0]-(1.5*cm), 24.65*cm, 'Total Budget:')
+        canvas.drawRightString(doc.pagesize[0]-(1.5*cm), 24.2*cm, self.total_budget)
+
+        canvas.setFillColor(colors.black)
+        canvas.rect(1.5*cm, 27.69*cm, 18*cm, 0.01*cm, fill=1)
+        canvas.rect(1.5*cm, 27.6*cm, 18*cm, 0.01*cm, fill=1)
+        canvas.rect(1.5*cm, 23.89*cm, 18*cm, 0.01*cm, fill=1)
+        canvas.rect(1.5*cm, 23.8*cm, 18*cm, 0.01*cm, fill=1)
         canvas.restoreState()
 
         self.addPageNumber(canvas, doc)
 
     def setBody(self):
-        self.elements.append(Spacer(1,4.5*cm))
+        self.elements.append(Spacer(1,3*cm))
         for country_data in self.print_data:
             self.setCountrySchedule(country_data)
 

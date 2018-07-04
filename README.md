@@ -8,6 +8,7 @@ pip install Flask-SQLAlchemy
 pip install flask-cors
 pip install PyMySQL
 pip install requests
+pip install reportlab
 
 Untuk membuat tabel pada database :
 python

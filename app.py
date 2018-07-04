@@ -659,8 +659,9 @@ def make_pdf():
     total_budget = data['total_budget']
     first_city = data['first_city']
     start_date = data['start_date']
+    offline = data['offline']
 
-    trip_pdf = TripPDF(filename=filename, print_data=print_data, total_days_trip=total_days_trip, dest_title=dest_title, total_budget=total_budget, first_city=first_city, start_date=start_date)
+    trip_pdf = TripPDF(filename=filename, print_data=print_data, total_days_trip=total_days_trip, dest_title=dest_title, total_budget=total_budget, first_city=first_city, start_date=start_date, offline=offline)
     trip_pdf.run()
 
     # return jsonify({'filename' : filename, 'print_data' : print_data, 'total_days_trip' : total_days_trip, 'dest_title' : dest_title, 'total_budget' : total_budget})
@@ -668,3 +669,4 @@ def make_pdf():
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0')
+	# app.run()
