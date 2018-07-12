@@ -140,7 +140,6 @@ class Tripschedule(db.Model):
     schedule_id = db.Column(db.Integer(), primary_key=True)
     user_id = db.Column(db.Integer(), db.ForeignKey('user.id'), nullable=False)
     plan_data = db.Column(db.Text(), nullable=False)
-    is_done = db.Column(db.Integer(), nullable=False)
     description = db.Column(db.Text(), nullable=True)
     created_at = db.Column(db.DateTime(), nullable=False)
     done_at = db.Column(db.DateTime(), nullable=True)
@@ -157,7 +156,7 @@ def hello():
 def test():
     return jsonify({'message' : 'MANTAPPP!!'})
 
-@app.route("/update/token", methods=['POST'])
+@app.route("/update/token", methods=['POST']) #1
 def update_device_token():
     data = request.get_json()
     user = User.query.filter(User.email == data['email']).first()
@@ -167,7 +166,7 @@ def update_device_token():
 
     return jsonify({'status': 'OK'})
 
-@app.route("/login", methods=['POST'])
+@app.route("/login", methods=['POST']) #2
 def login():
     data = request.get_json()
     user = User.query.filter(User.email == data['email']).first()
@@ -176,13 +175,15 @@ def login():
         new_user = {
             'id': user.id,
             'currency_id': user.currency_id,
-            'username': user.username
+            'username': user.username,
+            'email': user.email,
+            'device_token': user.device_token
         }
         return jsonify({'message' : 'Login Success..', 'user': new_user, 'status': 'OK'})
 
     return jsonify({'message' : 'Login Failed..', 'status': 'NO'})
 
-@app.route("/login/google", methods=['POST'])
+@app.route("/login/google", methods=['POST']) #3
 def google_login():
     data = request.get_json()
     user = User.query.filter(User.email == data['email']).first()
@@ -214,7 +215,7 @@ def google_login():
     }
     return jsonify({'message' : 'Login Success..', 'user': new_user, 'status': status})
 
-@app.route("/forgot/<email>", methods=['GET'])
+@app.route("/forgot/<email>", methods=['GET']) #4
 def forgot_password(email):
     user = User.query.filter(User.email == email).first()
 
@@ -235,7 +236,7 @@ def forgot_password(email):
     mail.send(msg)
     return jsonify({'message' : 'Your request is submitted!', 'email' : email, 'password' : new_password})
 
-@app.route("/user/changepass", methods=['POST'])
+@app.route("/user/changepass", methods=['POST']) #5
 def change_password():
     data = request.get_json()
     user = User.query.filter(User.email == data['email']).first()
@@ -248,7 +249,7 @@ def change_password():
 
     return jsonify({'message' : 'Change Password Failed!!', 'status' : 'NO'})
 
-@app.route("/user/register", methods=['POST'])
+@app.route("/user/register", methods=['POST']) #6
 def register_user():
     data = request.get_json()
 
@@ -267,7 +268,7 @@ def register_user():
 
     return jsonify({'message' : 'Success register new user.', 'status' : 'OK', 'user_id': new_user_id})
 
-@app.route("/currency", methods=['GET'])
+@app.route("/currency", methods=['GET']) #7
 def get_all_currency():
     currencies = Currency.query.all()
     result = []
@@ -281,7 +282,7 @@ def get_all_currency():
 
     return jsonify({'result': result})
 
-@app.route("/currency/update", methods=['POST'])
+@app.route("/currency/update", methods=['POST']) #8
 def update_currency():
     data = request.get_json()
 
@@ -292,7 +293,7 @@ def update_currency():
 
     return jsonify({'message' : 'Success update currency!'})
 
-@app.route("/autocomplete/hotels", methods=['GET'])
+@app.route("/autocomplete/hotels", methods=['GET']) #9
 def hotels_autocomplete():
     query = request.args.get('q')
 
@@ -302,7 +303,7 @@ def hotels_autocomplete():
 
     return jsonify(result)
 
-@app.route("/hotel/search", methods=['GET'])
+@app.route("/hotel/search", methods=['GET']) #10
 def hotel_search():
     adults = request.args.get("adults")
     children = request.args.get("children")
@@ -317,7 +318,7 @@ def hotel_search():
 
     return jsonify(result)
 
-@app.route("/city/all", methods=['GET'])
+@app.route("/city/all", methods=['GET']) #11
 def get_all_city():
     countries = Country.query.all()
     result = []
@@ -338,7 +339,7 @@ def get_all_city():
 
     return jsonify({'result': result})
 
-@app.route("/city/dest", methods=['GET'])
+@app.route("/city/dest", methods=['GET']) #12
 def get_city_destination():
     countries = Country.query.all()
     result = []
@@ -360,7 +361,7 @@ def get_city_destination():
 
     return jsonify({'result': result})
 
-@app.route("/airport/<city>", methods=['GET'])
+@app.route("/airport/<city>", methods=['GET']) #13
 def get_airport(city):
     city_code = '(' + city + ')'
     airport = Place.query.filter(Place.name.contains(city_code)).first()
@@ -390,7 +391,7 @@ def get_airport(city):
 
     return jsonify({'result': result})
 
-@app.route("/hotel/data/<hotel_id>", methods=['GET'])
+@app.route("/hotel/data/<hotel_id>", methods=['GET']) #14
 def get_hotel_data(hotel_id):
     hotel = Place.query.filter(Place.misc == hotel_id).first()
     result = {
@@ -419,14 +420,14 @@ def get_hotel_data(hotel_id):
 
     return jsonify({'result': result})
 
-@app.route("/airport/nearest/<city>", methods=['GET'])
+@app.route("/airport/nearest/<city>", methods=['GET']) #15
 def get_nearest_airport(city):
     airport = City.query.filter(City.city_code == city).first()
     result = airport.airport
 
     return jsonify({'result': result})
 
-@app.route("/hotel/<city>", methods=['GET'])
+@app.route("/hotel/<city>", methods=['GET']) #16
 def get_hotel(city):
     result = []
     hotels = Place.query.filter(Place.city_code == city).filter(Place.category_id == 4).all()
@@ -435,7 +436,7 @@ def get_hotel(city):
 
     return jsonify({'result': result, 'total': len(result)})
 
-@app.route("/attraction/<city>", methods=['GET'])
+@app.route("/attraction/<city>", methods=['GET']) #17
 def get_all_tourist_attraction(city):
     result = []
     attractions = Place.query.filter(Place.city_code == city).filter(Place.category_id == 2).order_by(desc(Place.reviews)).all()
@@ -467,7 +468,7 @@ def get_all_tourist_attraction(city):
 
     return jsonify({'result': result, 'total': len(result)})
 
-@app.route("/food/<city>", methods=['GET'])
+@app.route("/food/<city>", methods=['GET']) #18
 def get_all_food(city):
     result = []
     all_food = Place.query.filter(Place.city_code == city).filter(Place.category_id == 3).order_by(desc(Place.reviews)).all()
@@ -499,7 +500,7 @@ def get_all_food(city):
 
     return jsonify({'result': result, 'total': len(result)})
 
-@app.route("/place/distance", methods=['GET'])
+@app.route("/place/distance", methods=['GET']) #19
 def get_distance():
     origin = request.args.get("origin")
     destination = request.args.get("destination")
@@ -522,7 +523,7 @@ def get_distance():
 
     return jsonify({'result': result})
 
-@app.route("/place/nearby", methods=['GET'])
+@app.route("/place/nearby", methods=['GET']) #20
 def get_nearby():
     origin = request.args.get("origin")
     distances = Distance.query.filter(Distance.origin == origin).order_by(Distance.travel_time).limit(20).all()
@@ -566,19 +567,19 @@ def get_nearby():
 
     return jsonify({'result': result, 'length': len(result)})
 
-@app.route("/trip/auto", methods=['POST'])
+@app.route("/trip/auto", methods=['POST']) #21
 def save_auto_trip():
     data = request.get_json()
     created_at = datetime.now().replace(microsecond=0)
 
-    new_trip_schedule = Tripschedule(user_id=data['user_id'], plan_data=data['plan_data'], is_done=0, description=data['description'], created_at=created_at, done_at=None)
+    new_trip_schedule = Tripschedule(user_id=data['user_id'], plan_data=data['plan_data'], description=data['description'], created_at=created_at, done_at=None)
     db.session.add(new_trip_schedule)
     db.session.commit()
 
     #cari trip idnya berdasarkan created_at
     return jsonify({'message' : 'Success save new auto trip!'})
 
-@app.route("/trip/save", methods=['POST'])
+@app.route("/trip/save", methods=['POST']) #22
 def save_trip():
     data = request.get_json()
     created_at = datetime.now().replace(microsecond=0)
@@ -592,7 +593,7 @@ def save_trip():
 
     return jsonify({'message' : 'Success save new trip!', 'trip_id' : trip.id})
 
-@app.route("/trip/update", methods=['POST'])
+@app.route("/trip/update", methods=['POST']) #23
 def update_trip():
     data = request.get_json()
 
@@ -606,7 +607,7 @@ def update_trip():
 
     return jsonify({'message' : 'Success update trip!'})
 
-@app.route("/trip/load/all", methods=['GET'])
+@app.route("/trip/load/all", methods=['GET']) #24
 def load_trip_list():
     user_id = int(request.args.get("user_id"))
     trips = Trip.query.filter(Trip.user_id == user_id).order_by(desc(Trip.created_at)).all()
@@ -623,7 +624,7 @@ def load_trip_list():
 
     return jsonify({'result': result, 'total': len(result)})
 
-@app.route("/trip/load/<id>", methods=['GET'])
+@app.route("/trip/load/<id>", methods=['GET']) #25
 def load_trip(id):
     trip = Trip.query.filter(Trip.id == id).first()
     result = {
@@ -637,7 +638,7 @@ def load_trip(id):
 
     return jsonify({'result': result, 'total': len(result)})
 
-@app.route("/currency/<id>", methods=['GET'])
+@app.route("/currency/<id>", methods=['GET']) #26
 def get_currency_value(id):
     currency = Currency.query.filter(Currency.id == id.upper()).first()
     result = {
@@ -648,7 +649,7 @@ def get_currency_value(id):
 
     return jsonify({'result': result})
 
-@app.route("/make/pdf", methods=['POST'])
+@app.route("/make/pdf", methods=['POST']) #27
 def make_pdf():
     data = request.get_json()
 
